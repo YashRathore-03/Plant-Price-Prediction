@@ -1,66 +1,42 @@
-from flask import Flask, render_template, request
+from flask import Flask, request, jsonify, render_template
 import pickle
 import numpy as np
-
-# For TensorFlow model loading (if it's a TensorFlow model)
-try:
-    from tensorflow.keras.models import load_model
-except ImportError:
-    load_model = None  # TensorFlow might not be installed if you're using a different model
+import pandas as pd
 
 app = Flask(__name__)
 
-# Try to load the model as a Pickle (scikit-learn or any pickle model)
-model = None
-try:
-    with open("finalmodel.pkl", "rb") as f:
-        model = pickle.load(f)
-    print("Model loaded using pickle.")
-except Exception as e:
-    print(f"Error loading model with pickle: {e}")
-    
-    # If pickle fails, try loading as a TensorFlow model
-    if load_model is not None:
-        try:
-            model = load_model("finalmodel.pkl")
-            print("Model loaded using TensorFlow.")
-        except Exception as tf_e:
-            print(f"Error loading model with TensorFlow: {tf_e}")
+# Load the model
+model = pickle.load(open('finalmodel.pkl', 'rb'))
 
-# Ensure model is loaded successfully
-if model is None:
-    raise Exception("Failed to load the model. Please check the model format and file path.")
-
+# Route for the homepage
 @app.route('/')
-def load_page():
-    return render_template("index.html")
+def home():
+    return render_template('index.html')
 
-@app.route('/submit', methods=["POST"])
-def prediction():
-    try:
-        # Get form input
-        state_code = request.form["state_code"]
-        district = request.form["district"]
-        market = request.form["market"]
-        commodity = request.form["commodity"]
-        variety = request.form["variety"]
-        min_price = int(request.form["min_price"])
-        max_price = int(request.form["max_price"])
+# Route for predictions
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.json
 
-        # Prepare data for prediction
-        x_test = [[state_code, district, market, commodity, variety, min_price, max_price]]
-        print(f"Input data: {x_test}")
+    # Extracting input values from the request JSON
+    state = data.get('state', 0)
+    district = data.get('district', 0)
+    market = data.get('market', 0)
+    commodity = data.get('commodity', 0)
+    variety = data.get('variety', 0)
+    min_price = data.get('min_price', 0)
+    max_price = data.get('max_price', 0)
 
-        # Perform prediction
-        prediction = model.predict(x_test)
-        print(f"Prediction: {prediction}")
+    # You can preprocess the inputs here if needed
+    input_features = np.array([[
+        state, district, market, commodity, variety, min_price, max_price
+    ]])
 
-        # Display the result
-        return render_template("index.html", prediction_text=f"Predicted Price: {prediction}")
+    # Make the prediction using the model
+    prediction = model.predict(input_features)[0]  # Assuming it returns a single prediction value
 
-    except Exception as e:
-        # Display any error that occurs
-        return render_template("index.html", prediction_text=f"Error occurred: {str(e)}")
+    # Return the prediction as a JSON response
+    return jsonify({'prediction': prediction})
 
 if __name__ == "__main__":
     app.run(debug=True)
