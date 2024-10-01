@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Prediction App</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.containers {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 500px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.suggestion-box {
+    border: 1px solid #ccc;
+    max-height: 150px;
+    overflow-y: auto;
+    background-color: white;
+    position: absolute;
+    width: 100%;
+    display: none;
+    z-index: 100;
+}
+
+.suggestion-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestion-item:hover {
+    background-color: #f0f0f0;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.recommendations, .prediction {
+    font-size: 18px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+
+    </style>
+</head>
+<body>
+
+<div class="containers">
+    <h2>Commodity Price Prediction</h2>
+
+    <label for="state-input">State:</label>
+    <input type="text" id="state-input" placeholder="Type to search for a state..." autocomplete="off">
+    <div id="state-suggestion" class="suggestion-box"></div>
+
+    <label for="district-input">District:</label>
+    <input type="text" id="district-input" placeholder="Type to search for a district..." autocomplete="off">
+    <div id="district-suggestion" class="suggestion-box"></div>
+
+    <label for="market-input">Market:</label>
+    <input type="text" id="market-input" placeholder="Type to search for a market..." autocomplete="off">
+    <div id="market-suggestion" class="suggestion-box"></div>
+
+    <label for="commodity-input">Commodity:</label>
+    <input type="text" id="commodity-input" placeholder="Type to search for a commodity..." autocomplete="off">
+    <div id="commodity-suggestion" class="suggestion-box"></div>
+
+    <label for="variety-input">Variety:</label>
+    <input type="text" id="variety-input" placeholder="Type to search for a variety..." autocomplete="off">
+    <div id="variety-suggestion" class="suggestion-box"></div>
+
+    <!-- Manual price entry fields -->
+    <label for="min-price-input">Minimum Price (Enter manually):</label>
+    <input type="number" id="min-price-input" placeholder="Enter minimum price">
+
+    <label for="max-price-input">Maximum Price (Enter manually):</label>
+    <input type="number" id="max-price-input" placeholder="Enter maximum price">
+
+    <div class="recommendations" id="recommendation"></div>
+    <div class="prediction" id="prediction"></div>
+
+    <button id="submit-btn">Submit</button>
+</div>
+
+<script>
+    // Sample data (this can be dynamic, pulled from API or database)
+    const stateData = {'Andaman and Nicobar': 0, 'Andhra Pradesh': 1, 'Assam': 2, 'Chattisgarh': 3, 'Goa': 4, 'Gujarat': 5, 'Haryana': 6, 'Himachal Pradesh': 7, 'Jammu and Kashmir': 8, 'Karnataka': 9, 'Kerala': 10, 'Madhya Pradesh': 11, 'Maharashtra': 12, 'Manipur': 13, 'Meghalaya': 14, 'Nagaland': 15, 'Odisha': 16, 'Pondicherry': 17, 'Punjab': 18, 'Rajasthan': 19, 'Tamil Nadu': 20, 'Telangana': 21, 'Tripura': 22, 'Uttar Pradesh': 23, 'Uttrakhand': 24, 'West Bengal': 25};
+
+    const districtData = {'Agra': 0, 'Ahmednagar': 1, 'Alappuzha': 2, 'Aligarh': 3, 'Allahabad': 4, 'Ambala': 5, 'Amreli': 6, 'Amritsar': 7, 'Anand': 8, 'Angul': 9, 'Anupur': 10, 'Badgam': 11, 'Badwani': 12, 'Baghpat': 13, 'Bahraich': 14, 'Balasore': 15, 'Ballia': 16, 'Bangalore': 17, 'Bankura': 18, 'Baran': 19, 'Bargarh': 20, 'Barmer': 21, 'Barnala': 22, 'Bastar': 23, 'Bhadohi(Sant Ravi Nagar)': 24, 'Bharuch': 25, 'Bhatinda': 26, 'Bikaner': 27, 'Bishnupur': 28, 'Bulandshahar': 29, 'Buldhana': 30, 'Burdwan': 31, 'Cachar': 32, 'Chandel': 33, 'Chitrakut': 34, 'Chittor': 35, 'Chittorgarh': 36, 'Coimbatore': 37, 'Cuddalore': 38, 'Darrang': 39, 'Dehradoon': 40, 'Dhar': 41, 'Dharmapuri': 42, 'Dhenkanal': 43, 'Dhubri': 44, 'Dindigul': 45, 'Dindori': 46, 'East Khasi Hills': 47, 'Ernakulam': 48, 'Erode': 49, 'Etah': 50, 'Etawah': 51, 'Faridabad': 52, 'Farukhabad': 53, 'Fatehpur': 54, 'Gajapati': 55, 'Ganjam': 56, 'Gautam Budh Nagar': 57, 'Ghaziabad': 58, 'Gurdaspur': 59, 'Gurgaon': 60, 'Hooghly': 61, 'Hoshiarpur': 62, 'Hyderabad': 63, 'Imphal East': 64, 'Imphal West': 65, 'Jalandhar': 66, 'Jalaun (Orai)': 67, 'Jalgaon': 68, 'Jalore': 69, 'Jalpaiguri': 70, 'Jhabua': 71, 'Jhalawar': 72, 'Jhansi': 73, 'Jharsuguda': 74, 'Jorhat': 75, 'Kachchh': 76, 'Kamrup': 77, 'Kancheepuram': 78, 'Kangra': 79, 'Kanker': 80, 'Kannuj': 81, 'Kannur': 82, 'Kanpur': 83, 'Karaikal': 84, 'Karimnagar': 85, 'Kasargod': 86, 'Khammam': 87, 'Khandwa': 88, 'Kheda': 89, 'Khiri (Lakhimpur)': 90, 'Kolar': 91, 'Kolhapur': 92, 'Kollam': 93, 'Kota': 94, 'Kottayam': 95, 'Krishnagiri': 96, 'Kullu': 97, 'Kurnool': 98, 'Kurukshetra': 99, 'Lakhimpur': 100, 'Ludhiana': 101, 'Madurai': 102, 'Mahoba': 103, 'Malappuram': 104, 'Malda': 105, 'Mansa': 106, 'Mau(Maunathbhanjan)': 107, 'Mayurbhanja': 108, 'Medinipur(W)': 109, 'Mewat': 110, 'Mirzapur': 111, 'Mokokchung': 112, 'Muktsar': 113, 'Muradabad': 114, 'Murshidabad': 115, 'Muzaffarnagar': 116, 'Nadia': 117, 'Nagercoil (Kannyiakumari)': 118, 'Nagpur': 119, 'Nalgonda': 120, 'Namakkal': 121, 'Nanded': 122, 'Narsinghpur': 123, 'Nashik': 124, 'Nizamabad': 125, 'North 24 Parganas': 126, 'North Goa': 127, 'North Tripura': 128, 'Nowarangpur': 129, 'Panchmahals': 130, 'Panipat': 131, 'Patiala': 132, 'Pune': 133, 'Puruliya': 134, 'Raebarelli': 135, 'Ramanathapuram': 136, 'Rampur': 137, 'Ranga Reddy': 138, 'Ropar (Rupnagar)': 139, 'Saharanpur': 140, 'Salem': 141, 'Satara': 142, 'Sepahijala': 143, 'Shahjahanpur': 144, 'Sheopur': 145, 'Sholapur': 146, 'Sikar': 147, 'Sitapur': 148, 'Sivaganga': 149, 'Sonbhadra': 150, 'Sonitpur': 151, 'Sounth 24 Parganas': 152, 'South Andaman': 153, 'South District': 154, 'Sundergarh': 155, 'Surajpur': 156, 'Surat': 157, 'Tarntaran': 158, 'Thanjavur': 159, 'Thirssur': 160, 'Thiruvananthapuram': 161, 'Thiruvannamalai': 162, 'Thoubal': 163, 'Tonk': 164, 'Tumkur': 165, 'UdhamSinghNagar': 166, 'Uttar Dinajpur': 167, 'Vadodara(Baroda)': 168, 'Valsad': 169, 'Vellore': 170, 'Villupuram': 171, 'Virudhunagar': 172, 'West Godavari': 173};
+
+    const marketData = {'Acharapakkam': 0, 'Achnera': 1, 'Adampur': 2, 'Ait': 3, 'Akluj': 4, 'Aliganj': 5, 'Ammoor': 6, 'Anaimalai': 7, 'Anchal': 8, 'Angul': 9, 'Angul(Jarapada)': 10, 'Ankleshwar': 11, 'Annur': 12, 'Anta': 13, 'Aroor': 14, 'Asansol': 15, 'Atrauli': 16, 'Attili': 17, 'Attur': 18, 'Avalurpet': 19, 'Bachau': 20, 'Bagpat': 21, 'Balarampur': 22, 'Banaganapalli': 23, 'Baraut': 24, 'Bardoli(Katod)': 25, 'Bargur': 26, 'Barmer': 27, 'Barpathari': 28, 'Baruipur(Canning)': 29, 'Baruwasagar': 30, 'Begu': 31, 'Beldanga': 32, 'Betnoti': 33, 'Bhanjanagar': 34, 'Bhokar': 35, 'Bhucho': 36, 'Bhuntar': 37, 'Bindki': 38, 'Bishalgarh': 39, 'Bishenpur': 40, 'Bishnupur(Bankura)': 41, 'Bishramganj': 42, 'Bodeli': 43, 'Bodeli(Hadod)': 44, 'Bodeli(Kalediya)': 45, 'Bodeli(Modasar)': 46, 'Bonai': 47, 'Budalur': 48, 'Burdwan': 49, 'Cachar': 50, 'Charama': 51, 'Charkhari': 52, 'Chathanoor': 53, 'Chelakkara': 54, 'Chengalpattu': 55, 'Chengannur': 56, 'Chevella': 57, 'Cheyyar': 58, 'Chhibramau(Kannuj)': 59, 'Chikli(Khorgam)': 60, 'Chinnasalem': 61, 'Chirgaon': 62, 'Chitwadagaon': 63, 'Chogawan': 64, 'Chutmalpur': 65, 'Coimbatore': 66, 'Cuddalore': 67, 'Damnagar': 68, 'Dasda': 69, 'Dasuya': 70, 'Dehradoon': 71, 'Deoli': 72, 'Deoulgaon Raja': 73, 'Dera Baba Nanak': 74, 'Devband': 75, 'Dhanaula': 76, 'Dhar': 77, 'Dhar(F&V)': 78, 'Dharampuri': 79, 'Dharapuram': 80, 'Dhariwal': 81, 'Dhekiajuli': 82, 'Dhupguri': 83, 'Digapahandi': 84, 'Divai': 85, 'Doharighat': 86, 'Doraha': 87, 'Dudhi': 88, 'Elumathur': 89, 'Ettumanoor': 90, 'Faridabad': 91, 'Fatehabad': 92, 'Gadarwada': 93, 'Gangavalli': 94, 'Gangoh': 95, 'Gauripur': 96, 'Ghanaur': 97, 'Ghatal': 98, 'Gingee': 99, 'Godabhaga': 100, 'Gogamba': 101, 'Gogamba(Similiya)': 102, 'Gopalpatti': 103, 'Gopiganj': 104, 'Gorakhpur': 105, 'Gubbi': 106, 'Gulavati': 107, 'Gummidipoondy': 108, 'Guskara(Burdwan)': 109, 'Habra': 110, 'Hapur': 111, 'Harike': 112, 'Hindol': 113, 'Imphal': 114, 'Irinjalakkuda': 115, 'Islampur': 116, 'Itawa': 117, 'Jagdalpur': 118, 'Jagnair': 119, 'Jaithari': 120, 'Jalalabad': 121, 'Jaleswar': 122, 'Jalore': 123, 'Jangipur': 124, 'Jarar': 125, 'Jasvantnagar': 126, 'Javer': 127, 'Jharsuguda': 128, 'Jorhat': 129, 'Kadaura': 130, 'Kalanaur': 131, 'Kalavai': 132, 'Kalikiri': 133, 'Kaliyanchanda': 134, 'Kallakurichi': 135, 'Kalliakavillai': 136, 'Kalna': 137, 'Kamlaganj': 138, 'Kanchipuram': 139, 'Kangra(Jaisinghpur)': 140, 'Kangra(Jassour)': 141, 'Karad': 142, 'Karaikal': 143, 'Karamadai': 144, 'Karumanturai': 145, 'Kasargod': 146, 'Kashipur': 147, 'Kasinagar': 148, 'Katwa': 149, 'Khairagarh': 150, 'Khambhat(Grain Market)': 151, 'Khanpur': 152, 'Kharupetia': 153, 'Khatra': 154, 'Kishunpur': 155, 'Kodumudi': 156, 'Kodungalloor': 157, 'Kolar': 158, 'Kolathur': 159, 'Kolhapur': 160, 'Kolhapur(Malkapur)': 161, 'Kondotty': 162, 'Konganapuram': 163, 'Koratla': 164, 'Kottayam': 165, 'Kumbakonam': 166, 'Kunnathur': 167, 'Kurinchipadi': 168, 'Lakhanpuri': 169, 'Lalganj': 170, 'Lamlong Bazaar': 171, 'Lasalgaon(Niphad)': 172, 'Lohian Khas': 173, 'Lunkaransar': 174, 'Madathukulam': 175, 'Madhira': 176, 'Madlauda': 177, 'Maduranthagam': 178, 'Mahboob Manison': 179, 'Malout': 180, 'Manalurpet': 181, 'Mandvi': 182, 'Mangal Wedha': 183, 'Mangkolemba': 184, 'Manjeswaram': 185, 'Mannar': 186, 'Mansa': 187, 'Maranelloor': 188, 'Mau(Chitrakut)': 189, 'Mehatpur': 190, 'Mehta': 191, 'Melur': 192, 'Memari': 193, 'Mihipurwa': 194, 'Milak': 195, 'Mirzapur': 196, 'Mohammdi': 197, 'Moreh': 198, 'Morinda': 199, 'Mulakalacheruvu': 200, 'Muthur': 201, 'Muzzafarnagar': 202, 'Nadia': 203, 'Nadiyad(Chaklasi)': 204, 'Nakud': 205, 'Nalgonda': 206, 'Namagiripettai': 207, 'Namakkal': 208, 'Nanuta': 209, 'Narharpur': 210, 'Nawarangpur': 211, 'Negamam': 212, 'Newasa(Ghodegaon)': 213, 'Nilagiri': 214, 'Omalur': 215, 'Orathanadu': 216, 'Padra': 217, 'Palakode': 218, 'Palampur': 219, 'Palani': 220, 'Paliakala': 221, 'Palladam': 222, 'Pallahara': 223, 'Pallipattu': 224, 'Pamohi(Garchuk)': 225, 'Pandhana(F&V)': 226, 'Pandharpur': 227, 'Pandua': 228, 'Panposh': 229, 'Papanasam': 230, 'Papparapatti': 231, 'Pappireddipatti': 232, 'Parassala': 233, 'Parlakhemundi': 234, 'Pataudi': 235, 'Patti': 236, 'Pennagaram': 237, 'Pethappampatti': 238, 'Pipli': 239, 'Piravam': 240, 'Pitlam': 241, 'Pochampalli': 242, 'Pollachi': 243, 'Pongalur': 244, 'Ponner': 245, 'Port Blair': 246, 'Pratappur': 247, 'Pudupalayam': 248, 'Pune': 249, 'Pune(Hadapsar)': 250, 'Pune(Khadiki)': 251, 'Pune(Pimpri)': 252, 'Purulia': 253, 'Rahata': 254, 'Raiganj': 255, 'Rajapalayam': 256, 'Rajpura': 257, 'Ramanagara': 258, 'Ramannapet': 259, 'Rasipuram': 260, 'Risia': 261, 'Robertsganj': 262, 'Ruperdeeha': 263, 'Rura': 264, 'S.Mandvi': 265, 'Sahnewal': 266, 'Salem': 267, 'Sambhal': 268, 'Samsabad': 269, 'Samsi': 270, 'Sangarapuram': 271, 'Sanquelim': 272, 'Saraskana': 273, 'Sathur': 274, 'Savner': 275, 'Sendhwa': 276, 'Senjeri': 277, 'Sevur': 278, 'Shahpur': 279, 'Shahzadpur': 280, 'Sheopurkalan': 281, 'Shillong': 282, 'Singampuneri': 283, 'Sirsa': 284, 'Sivagangai': 285, 'Siyana': 286, 'Sri Madhopur': 287, 'Sultanpurchilkana': 288, 'Sunguvarchatram': 289, 'Surajgarh': 290, 'Syopurkalan(F&V)': 291, 'Taliparamba': 292, 'Taura': 293, 'Thalaivasal': 294, 'Thammampati': 295, 'Thanabhawan': 296, 'Thandla': 297, 'Thanjavur': 298, 'Thirumangalam': 299, 'Thiruppananthal': 300, 'Thondamuthur': 301, 'Thoubal': 302, 'Tikonia': 303, 'Tindivanam': 304, 'Tiruchengode': 305, 'Tiruvennainallur': 306, 'Udumalpet': 307, 'Umreth': 308, 'Uniyara': 309, 'Uthangarai': 310, 'Uthiramerur': 311, 'Vallam': 312, 'Vayalapadu': 313, 'Vazhapadi': 314, 'Vellakkoil': 315, 'Vellore': 316, 'Velur': 317, 'Vemulawada': 318, 'Vikkiravandi': 319, 'Villupuram': 320, 'Viswan': 321, 'Voligonda': 322, 'Vyra': 323, 'Yawal': 324, 'Zaloosa-Chararishrief (F&V)': 325};
+
+    const commodityData = {
+        'Amaranthus': 0,
+        'Amla(Nelli Kai)': 1,
+        'Amphophalus': 2,
+        'Apple': 3,
+        'Arecanut(Betelnut/Supari)': 4
+        // Add more commodities
+    };
+
+    const varietyData = {
+        'Subabul': 0,
+        'Red Nanital': 1,
+        '1001': 2,
+        '1009 Kar': 3,
+        '1121': 4
+        // Add more varieties
+    };
+
+    // Function to show suggestions dynamically
+    function showSuggestions(inputElement, dataObject, suggestionBoxId) {
+        const query = inputElement.value.toLowerCase();
+        const suggestionBox = document.getElementById(suggestionBoxId);
+        suggestionBox.innerHTML = '';
+        if (query) {
+            suggestionBox.style.display = 'block';
+            const filteredItems = Object.keys(dataObject).filter(item => item.toLowerCase().includes(query));
+            filteredItems.forEach(item => {
+                const div = document.createElement('div');
+                div.classList.add('suggestion-item');
+                div.textContent = item;
+                div.addEventListener('click', function () {
+                    inputElement.value = item;
+                    suggestionBox.style.display = 'none';
+                });
+                suggestionBox.appendChild(div);
+            });
+        } else {
+            suggestionBox.style.display = 'none';
+        }
+    }
+
+    // Event listeners for inputs
+    document.getElementById('state-input').addEventListener('input', function () {
+        showSuggestions(this, stateData, 'state-suggestion');
+    });
+    document.getElementById('district-input').addEventListener('input', function () {
+        showSuggestions(this, districtData, 'district-suggestion');
+    });
+    document.getElementById('market-input').addEventListener('input', function () {
+        showSuggestions(this, marketData, 'market-suggestion');
+    });
+    document.getElementById('commodity-input').addEventListener('input', function () {
+        showSuggestions(this, commodityData, 'commodity-suggestion');
+    });
+    document.getElementById('variety-input').addEventListener('input', function () {
+        showSuggestions(this, varietyData, 'variety-suggestion');
+    });
+
+    // Handle submit button and price prediction
+    document.getElementById('submit-btn').addEventListener('click', function () {
+        const state = document.getElementById('state-input').value;
+        const district = document.getElementById('district-input').value;
+        const market = document.getElementById('market-input').value;
+        const commodity = document.getElementById('commodity-input').value;
+        const variety = document.getElementById('variety-input').value;
+
+        const minPrice = document.getElementById('min-price-input').value;
+        const maxPrice = document.getElementById('max-price-input').value;
+
+        if (state && district && market && commodity && variety) {
+            let predictionText = '';
+            if (minPrice && maxPrice) {
+                predictionText = `Predicted Price: ${(parseFloat(minPrice) + parseFloat(maxPrice)) / 2}`;
+            } else {
+                // Example hardcoded min and max prices if not entered manually
+                const recommendedMinPrice = 100; 
+                const recommendedMaxPrice = 500; 
+                predictionText = `Recommended Min Price: ${recommendedMinPrice}, Max Price: ${recommendedMaxPrice}. Predicted Price: ${(recommendedMinPrice + recommendedMaxPrice) / 2}`;
+            }
+
+            document.getElementById('recommendation').textContent = predictionText;
+        } else {
+            alert('Please fill out all fields!');
+        }
+    });
+
+</script>
+
+</body>
+</html>
+

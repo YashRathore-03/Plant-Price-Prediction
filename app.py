@@ -1,47 +1,66 @@
 from flask import Flask, render_template, request
-import joblib
 import pickle
 import numpy as np
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import TFSMLayer  # May not be needed
-import sklearn.ensemble  # May not be needed
 
-# Load model (adjust based on format)
-if "finalmodel.pkl" in globals():
-    model = globals()["model"]
-else:
-    try:
-        # Try pickle loading
-        with open("finalmodel.pkl", "rb") as f:
-            model = pickle.load(f)
-    except (pickle.UnpicklingError, FileNotFoundError):
-        # If pickle fails, try TensorFlow SavedModel loading
-        model = load_model("finalmodel.pkl")
+# For TensorFlow model loading (if it's a TensorFlow model)
+try:
+    from tensorflow.keras.models import load_model
+except ImportError:
+    load_model = None  # TensorFlow might not be installed if you're using a different model
 
 app = Flask(__name__)
 
+# Try to load the model as a Pickle (scikit-learn or any pickle model)
+model = None
+try:
+    with open("finalmodel.pkl", "rb") as f:
+        model = pickle.load(f)
+    print("Model loaded using pickle.")
+except Exception as e:
+    print(f"Error loading model with pickle: {e}")
+    
+    # If pickle fails, try loading as a TensorFlow model
+    if load_model is not None:
+        try:
+            model = load_model("finalmodel.pkl")
+            print("Model loaded using TensorFlow.")
+        except Exception as tf_e:
+            print(f"Error loading model with TensorFlow: {tf_e}")
+
+# Ensure model is loaded successfully
+if model is None:
+    raise Exception("Failed to load the model. Please check the model format and file path.")
+
 @app.route('/')
-def loadpage():
+def load_page():
     return render_template("index.html")
 
 @app.route('/submit', methods=["POST"])
 def prediction():
-    # Extract user input
-    state_code = request.form["state_code"]
-    district = request.form["district"]
-    market = request.form["market"]
-    commodity = request.form["commodity"]
-    variety = request.form["variety"]
-    min_price = int(request.form["min_price"])
-    max_price = int(request.form["max_price"])
+    try:
+        # Get form input
+        state_code = request.form["state_code"]
+        district = request.form["district"]
+        market = request.form["market"]
+        commodity = request.form["commodity"]
+        variety = request.form["variety"]
+        min_price = int(request.form["min_price"])
+        max_price = int(request.form["max_price"])
 
+        # Prepare data for prediction
+        x_test = [[state_code, district, market, commodity, variety, min_price, max_price]]
+        print(f"Input data: {x_test}")
 
-    x_test = [[state_code, district, market, commodity, variety, min_price, max_price]]
-    print(x_test)
+        # Perform prediction
+        prediction = model.predict(x_test)
+        print(f"Prediction: {prediction}")
 
-    prediction = model.predict(x_test)  # Assuming x_test is appropriate for your model
+        # Display the result
+        return render_template("index.html", prediction_text=f"Predicted Price: {prediction}")
 
-    return render_template("index.html", prediction_text=prediction)  # Update with actual prediction
+    except Exception as e:
+        # Display any error that occurs
+        return render_template("index.html", prediction_text=f"Error occurred: {str(e)}")
 
 if __name__ == "__main__":
     app.run(debug=True)
